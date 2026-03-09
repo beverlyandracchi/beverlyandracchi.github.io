@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Forensic Glass Analysis Lab</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { margin: 0; background-color: #f3f4f6; font-family: sans-serif; }
+        canvas { display: block; margin: 0 auto; background-color: white; border-radius: 0.5rem; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); cursor: crosshair; }
+        .tab-active { background-color: #1e40af; color: white; border-color: #1e40af; }
+        .tab-inactive { background-color: #e5e7eb; color: #4b5563; border-color: #d1d5db; }
+        .tab-inactive:hover { background-color: #d1d5db; }
+    </style>
+</head>
+<body class="flex flex-col items-center p-6 h-screen">
+
+    <div class="max-w-5xl w-full bg-white rounded-xl shadow-lg overflow-hidden flex flex-col md:flex-row h-full">
+        
+        <!-- Controls Sidebar -->
+        <div class="w-full md:w-1/3 bg-gray-50 border-r border-gray-200 flex flex-col">
+            
+            <!-- Tabs -->
+            <div class="flex p-4 pb-0 space-x-2">
+                <button id="btn-optics" class="flex-1 py-2 px-4 rounded-t-lg font-bold text-sm border-t border-l border-r tab-active transition-colors">
+                    Optics Lab
+                </button>
+                <button id="btn-fracture" class="flex-1 py-2 px-4 rounded-t-lg font-bold text-sm border-t border-l border-r tab-inactive transition-colors">
+                    Fracture Lab
+                </button>
+            </div>
+
+            <!-- Optics Lab Controls -->
+            <div id="panel-optics" class="p-6 flex-1 flex flex-col overflow-y-auto">
+                <h2 class="text-xl font-bold text-gray-800 mb-2">Refraction & Density</h2>
+                <p class="text-sm text-gray-600 mb-6">Test the optical properties and observe the microscopic structure of the evidence.</p>
+                
+                <div class="mb-6">
+                    <label for="sample-select" class="block text-sm font-medium text-gray-700 mb-2">Select Glass Sample:</label>
+                    <select id="sample-select" class="block w-full px-3 py-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                        <option value="crime">Crime Scene Glass</option>
+                        <option value="suspect1">Suspect 1 (Ford F-150)</option>
+                        <option value="suspect2">Suspect 2 (Honda Civic)</option>
+                        <option value="suspect3">Suspect 3 (Chevy Malibu)</option>
+                    </select>
+                </div>
+
+                <div class="mb-6">
+                    <label for="angle-slider" class="block text-sm font-medium text-gray-700 mb-2">
+                        Angle of Incidence (&theta;₁): <span id="angle-val" class="font-bold text-blue-600">45.0&deg;</span>
+                    </label>
+                    <input type="range" id="angle-slider" min="10" max="80" value="45" step="0.1" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer">
+                </div>
+
+                <div class="bg-blue-100 p-4 rounded-lg border border-blue-200 mb-6">
+                    <h3 class="text-sm font-semibold text-blue-800 mb-1">Measurements</h3>
+                    <p class="text-sm text-blue-900">Incidence (&theta;₁): <span id="readout-theta1" class="font-mono font-bold">45.0&deg;</span></p>
+                    <p class="text-sm text-blue-900">Refraction (&theta;₂): <span id="readout-theta2" class="font-mono font-bold text-red-600">28.1&deg;</span></p>
+                </div>
+
+                <!-- Microscopic View Box -->
+                <div class="mt-auto bg-gray-800 p-4 rounded-lg border border-gray-700 text-center">
+                    <h3 class="text-sm font-semibold text-gray-200 mb-2">Microscopic Particle View</h3>
+                    <canvas id="particleCanvas" width="200" height="150" class="mx-auto rounded bg-gray-900" style="cursor: default;"></canvas>
+                    <p class="text-xs text-gray-400 mt-2">Denser atomic structure = higher refractive index</p>
+                </div>
+            </div>
+
+            <!-- Fracture Lab Controls -->
+            <div id="panel-fracture" class="p-6 flex-1 flex flex-col hidden overflow-y-auto">
+                <h2 class="text-xl font-bold text-gray-800 mb-2">Fracture Pattern Analysis</h2>
+                <p class="text-sm text-gray-600 mb-4">Analyze how energy transfers through the glass structure during high-velocity impacts.</p>
+                
+                <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-6">
+                    <div class="flex">
+                        <div class="ml-3">
+                            <p class="text-sm text-yellow-700">
+                                <strong>Instructions:</strong> Click anywhere on the glass pane to simulate a bullet impact. Fire multiple times to see the <strong>Rule of Intersecting Fractures</strong> in action.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-gray-100 p-4 rounded-lg border border-gray-200 mb-6">
+                    <h3 class="text-sm font-semibold text-gray-800 mb-2">Impact Log</h3>
+                    <ul id="impact-log" class="text-sm text-gray-600 list-disc pl-5">
+                        <li class="italic text-gray-400" id="empty-log">No impacts recorded.</li>
+                    </ul>
+                </div>
+
+                <button id="btn-reset" class="mt-auto w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline transition-colors">
+                    Reset Glass Pane
+                </button>
+            </div>
+        </div>
+
+        <!-- Main Simulation Canvas Area -->
+        <div class="w-full md:w-2/3 p-6 flex justify-center items-center bg-gray-200 relative">
+            <canvas id="simCanvas" width="500" height="500"></canvas>
+        </div>
+    </div>
+
+    <script>
+        // --- State & DOM Elements ---
+        let currentTab = 'optics'; // 'optics' or 'fracture'
+        
+        const canvas = document.getElementById('simCanvas');
+        const ctx = canvas.getContext('2d');
+        const particleCanvas = document.getElementById('particleCanvas');
+        const pCtx = particleCanvas.getContext('2d');
+        
+        const btnOptics = document.getElementById('btn-optics');
+        const btnFracture = document.getElementById('btn-fracture');
+        const panelOptics = document.getElementById('panel-optics');
+        const panelFracture = document.getElementById('panel-fracture');
+        const impactLog = document.getElementById('impact-log');
+        const emptyLog = document.getElementById('empty-log');
+        const btnReset = document.getElementById('btn-reset');
+
+        // --- Optics Data ---
+        const sampleSelect = document.getElementById('sample-select');
+        const angleSlider = document.getElementById('angle-slider');
+        const angleValDisplay = document.getElementById('angle-val');
+        const readoutTheta1 = document.getElementById('readout-theta1');
+        const readoutTheta2 = document.getElementById('readout-theta2');
+
+        const n1 = 1.0003; // Air
+        const glassData = {
+            'crime': { n: 1.503, density: 2.48 },
+            'suspect1': { n: 1.503, density: 2.45 },
+            'suspect2': { n: 1.455, density: 2.49 }, 
+            'suspect3': { n: 1.530, density: 2.42 }  
+        };
+
+        let currentSample = glassData['crime'];
+        let theta1Deg = parseFloat(angleSlider.value);
+        let particles = [];
+
+        // --- Fracture Data ---
+        let impacts = [];
+        let cracks = []; // Mathematical lines that block future cracks
+        let cosmeticCracks = []; // Concentric lines for visuals
+        const labels = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+        
+        const canvasBounds = [
+            {p1: {x: 0, y: 0}, p2: {x: canvas.width, y: 0}},
+            {p1: {x: canvas.width, y: 0}, p2: {x: canvas.width, y: canvas.height}},
+            {p1: {x: canvas.width, y: canvas.height}, p2: {x: 0, y: canvas.height}},
+            {p1: {x: 0, y: canvas.height}, p2: {x: 0, y: 0}}
+        ];
+
+        // --- Tab Switching Logic ---
+        function switchTab(tab) {
+            currentTab = tab;
+            if (tab === 'optics') {
+                btnOptics.className = "flex-1 py-2 px-4 rounded-t-lg font-bold text-sm border-t border-l border-r tab-active transition-colors";
+                btnFracture.className = "flex-1 py-2 px-4 rounded-t-lg font-bold text-sm border-t border-l border-r tab-inactive transition-colors";
+                panelOptics.classList.remove('hidden');
+                panelFracture.classList.add('hidden');
+                canvas.style.cursor = 'default';
+            } else {
+                btnFracture.className = "flex-1 py-2 px-4 rounded-t-lg font-bold text-sm border-t border-l border-r tab-active transition-colors";
+                btnOptics.className = "flex-1 py-2 px-4 rounded-t-lg font-bold text-sm border-t border-l border-r tab-inactive transition-colors";
+                panelFracture.classList.remove('hidden');
+                panelOptics.classList.add('hidden');
+                canvas.style.cursor = 'crosshair';
+            }
+            draw();
+        }
+
+        btnOptics.addEventListener('click', () => switchTab('optics'));
+        btnFracture.addEventListener('click', () => switchTab('fracture'));
+
+        // --- Optics Logic ---
+        function generateParticles(n) {
+            particles = [];
+            const baseCount = 100;
+            const extraCount = Math.floor((n - 1.4) * 400); 
+            const totalParticles = baseCount + extraCount;
+
+            for (let i = 0; i < totalParticles; i++) {
+                particles.push({
+                    x: Math.random() * particleCanvas.width,
+                    y: Math.random() * particleCanvas.height,
+                    radius: 2 + Math.random() * 2
+                });
+            }
+        }
+
+        function drawParticles() {
+            pCtx.clearRect(0, 0, particleCanvas.width, particleCanvas.height);
+            pCtx.fillStyle = '#10b981'; 
+            particles.forEach(p => {
+                pCtx.beginPath();
+                pCtx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                pCtx.fill();
+            });
+        }
+
+        function drawOptics() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            const cx = canvas.width / 2;
+            const cy = canvas.height / 2;
+
+            // Backgrounds
+            ctx.fillStyle = '#e0f2fe'; 
+            ctx.fillRect(0, 0, canvas.width, cy);
+            ctx.fillStyle = '#0369a1';
+            ctx.font = '16px sans-serif';
+            ctx.fillText('Medium 1: Air (n₁ = 1.0003)', 10, 20);
+
+            ctx.fillStyle = '#dcfce7'; 
+            ctx.fillRect(0, cy, canvas.width, cy);
+            ctx.fillStyle = '#15803d';
+            ctx.fillText(`Medium 2: Glass Sample (n₂ = ${currentSample.n.toFixed(3)})`, 10, cy + 20);
+
+            // Normal Line
+            ctx.beginPath();
+            ctx.setLineDash([5, 5]);
+            ctx.moveTo(cx, 0);
+            ctx.lineTo(cx, canvas.height);
+            ctx.strokeStyle = '#6b7280';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            ctx.setLineDash([]);
+            
+            ctx.fillStyle = '#6b7280';
+            ctx.fillText('Normal', cx + 10, 20);
+
+            // Angles
+            const theta1Rad = theta1Deg * (Math.PI / 180);
+            const sinTheta2 = (n1 / currentSample.n) * Math.sin(theta1Rad);
+            const theta2Rad = Math.asin(sinTheta2);
+            const theta2Deg = theta2Rad * (180 / Math.PI);
+
+            readoutTheta1.textContent = theta1Deg.toFixed(1) + '°';
+            readoutTheta2.textContent = theta2Deg.toFixed(1) + '°';
+
+            // Rays
+            const startX = cx - cy * Math.tan(theta1Rad);
+            ctx.beginPath();
+            ctx.moveTo(startX, 0);
+            ctx.lineTo(cx, cy);
+            ctx.strokeStyle = '#ef4444';
+            ctx.lineWidth = 4;
+            ctx.stroke();
+
+            const endX = cx + cy * Math.tan(theta2Rad);
+            ctx.beginPath();
+            ctx.moveTo(cx, cy);
+            ctx.lineTo(endX, canvas.height);
+            ctx.strokeStyle = '#ef4444';
+            ctx.lineWidth = 4;
+            ctx.stroke();
+
+            // Arcs
+            ctx.beginPath();
+            ctx.arc(cx, cy, 60, -Math.PI/2 - theta1Rad, -Math.PI/2, false);
+            ctx.strokeStyle = '#1e40af';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            
+            ctx.beginPath();
+            ctx.arc(cx, cy, 70, Math.PI/2 - theta2Rad, Math.PI/2, false);
+            ctx.strokeStyle = '#166534';
+            ctx.stroke();
+
+            ctx.fillStyle = '#1e40af';
+            ctx.font = 'bold 14px sans-serif';
+            ctx.fillText(`θ₁`, cx - 35, cy - 70);
+            ctx.fillStyle = '#166534';
+            ctx.fillText(`θ₂`, cx + 25, cy + 85);
+        }
+
+        // --- Fracture Logic ---
+        function getIntersection(rayOrigin, rayDir, p3, p4) {
+            const p1 = rayOrigin;
+            const p2 = { x: rayOrigin.x + rayDir.x, y: rayOrigin.y + rayDir.y };
+
+            const den = (p1.x - p2.x) * (p3.y - p4.y) - (p1.y - p2.y) * (p3.x - p4.x);
+            if (den === 0) return null; // Parallel
+
+            const t = ((p1.x - p3.x) * (p3.y - p4.y) - (p1.y - p3.y) * (p3.x - p4.x)) / den;
+            const u = -((p1.x - p2.x) * (p1.y - p3.y) - (p1.y - p2.y) * (p1.x - p3.x)) / den;
+
+            if (t > 0 && u >= 0 && u <= 1) {
+                return { x: p1.x + t * (p2.x - p1.x), y: p1.y + t * (p2.y - p1.y), distance: t };
+            }
+            return null;
+        }
+
+        function createImpact(x, y) {
+            if (impacts.length >= 10) return; // limit impacts
+            
+            const label = labels[impacts.length];
+            impacts.push({ x, y, label });
+            
+            // Update log
+            if (emptyLog) emptyLog.style.display = 'none';
+            const li = document.createElement('li');
+            li.innerHTML = `Impact <strong>${label}</strong> recorded at (${Math.round(x)}, ${Math.round(y)})`;
+            impactLog.appendChild(li);
+
+            const numRadials = Math.floor(Math.random() * 6) + 12; // 12-18 lines
+            let currentRadials = [];
+
+            for (let i = 0; i < numRadials; i++) {
+                let angle = (i / numRadials) * Math.PI * 2 + (Math.random() * 0.2 - 0.1);
+                let dir = { x: Math.cos(angle), y: Math.sin(angle) };
+                
+                let closestDist = Infinity;
+                let endPt = null;
+
+                // Stop at canvas bounds
+                canvasBounds.forEach(bound => {
+                    let inter = getIntersection({x, y}, dir, bound.p1, bound.p2);
+                    if (inter && inter.distance < closestDist) {
+                        closestDist = inter.distance;
+                        endPt = inter;
+                    }
+                });
+
+                // STOP AT EXISTING CRACKS (The NGSS Rule!)
+                cracks.forEach(crack => {
+                    let inter = getIntersection({x, y}, dir, crack.p1, crack.p2);
+                    // dist > 2 prevents line from intersecting with itself at the origin point
+                    if (inter && inter.distance > 2 && inter.distance < closestDist) {
+                        closestDist = inter.distance;
+                        endPt = inter;
+                    }
+                });
+
+                if (endPt) {
+                    const newCrack = { p1: {x, y}, p2: {x: endPt.x, y: endPt.y} };
+                    cracks.push(newCrack);
+                    currentRadials.push(newCrack);
+                }
+            }
+
+            // Add some cosmetic concentric cracks (these won't block future radials to keep the lesson clear)
+            for(let i = 0; i < currentRadials.length; i++) {
+                if(Math.random() > 0.4) {
+                    const r1 = currentRadials[i];
+                    const r2 = currentRadials[(i + 1) % currentRadials.length];
+                    // Pick a random distance along the crack
+                    const distPercent = 0.2 + Math.random() * 0.6;
+                    const cp1 = {
+                        x: r1.p1.x + (r1.p2.x - r1.p1.x) * distPercent,
+                        y: r1.p1.y + (r1.p2.y - r1.p1.y) * distPercent
+                    };
+                    const cp2 = {
+                        x: r2.p1.x + (r2.p2.x - r2.p1.x) * distPercent,
+                        y: r2.p1.y + (r2.p2.y - r2.p1.y) * distPercent
+                    };
+                    cosmeticCracks.push({p1: cp1, p2: cp2});
+                }
+            }
+
+            draw();
+        }
+
+        function drawFractures() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Glass background
+            ctx.fillStyle = '#e5e7eb';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Add a slight glass sheen
+            const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+            gradient.addColorStop(0, "rgba(255,255,255,0.4)");
+            gradient.addColorStop(0.5, "rgba(255,255,255,0)");
+            gradient.addColorStop(1, "rgba(255,255,255,0.1)");
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Draw Cracks
+            ctx.beginPath();
+            cracks.forEach(c => {
+                ctx.moveTo(c.p1.x, c.p1.y);
+                ctx.lineTo(c.p2.x, c.p2.y);
+            });
+            cosmeticCracks.forEach(c => {
+                ctx.moveTo(c.p1.x, c.p1.y);
+                ctx.lineTo(c.p2.x, c.p2.y);
+            });
+            ctx.strokeStyle = '#1f2937';
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+
+            // Draw Impacts
+            impacts.forEach(imp => {
+                // Bullet hole
+                ctx.beginPath();
+                ctx.arc(imp.x, imp.y, 6, 0, Math.PI*2);
+                ctx.fillStyle = '#000';
+                ctx.fill();
+                
+                // Label
+                ctx.fillStyle = '#dc2626';
+                ctx.font = 'bold 20px sans-serif';
+                ctx.fillText(imp.label, imp.x + 10, imp.y - 10);
+            });
+        }
+
+        // --- Main Draw Router ---
+        function draw() {
+            if (currentTab === 'optics') {
+                drawOptics();
+            } else {
+                drawFractures();
+            }
+        }
+
+        // --- Event Listeners ---
+        angleSlider.addEventListener('input', (e) => {
+            theta1Deg = parseFloat(e.target.value);
+            angleValDisplay.textContent = theta1Deg.toFixed(1) + '°';
+            if (currentTab === 'optics') draw();
+        });
+
+        sampleSelect.addEventListener('change', (e) => {
+            currentSample = glassData[e.target.value];
+            generateParticles(currentSample.n);
+            drawParticles();
+            if (currentTab === 'optics') draw();
+        });
+
+        canvas.addEventListener('mousedown', (e) => {
+            if (currentTab !== 'fracture') return;
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            createImpact(x, y);
+        });
+
+        btnReset.addEventListener('click', () => {
+            impacts = [];
+            cracks = [];
+            cosmeticCracks = [];
+            impactLog.innerHTML = '<li class="italic text-gray-400" id="empty-log">No impacts recorded.</li>';
+            draw();
+        });
+
+        // --- Initialization ---
+        generateParticles(currentSample.n);
+        drawParticles();
+        draw();
+
+    </script>
+</body>
+</html>
