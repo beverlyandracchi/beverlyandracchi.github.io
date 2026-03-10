@@ -44,12 +44,28 @@
 </head>
 <body class="bg-gray-100 p-4 min-h-screen font-sans">
     <div class="max-w-5xl mx-auto bg-white rounded-2xl shadow-2xl overflow-hidden">
-        <div class="bg-slate-800 p-6 text-white">
-            <h1 class="text-2xl font-bold">Evidence Analysis: Particle Density Patterns</h1>
-            <p class="text-slate-300 text-sm">Forensic Unit ID: HS-PS1-1-G</p>
+        <div class="bg-slate-800 p-6 text-white flex justify-between items-center">
+            <div>
+                <h1 class="text-2xl font-bold">Evidence Analysis: Particle Density Patterns</h1>
+                <p class="text-slate-300 text-sm">Forensic Unit ID: HS-PS1-1-G</p>
+            </div>
+            <div class="text-right hidden md:block">
+                <p class="text-xs uppercase tracking-widest text-slate-400">Characteristic Properties</p>
+                <p class="text-sm font-semibold">Structure & Matter</p>
+            </div>
         </div>
 
         <div class="p-8">
+            <!-- Glass Composition Info Section -->
+            <div class="mb-10 p-4 bg-amber-50 border-l-4 border-amber-400 rounded-r-lg">
+                <h2 class="text-lg font-bold text-amber-900 mb-2 italic">Technical Note: Atomic Additives</h2>
+                <p class="text-sm text-amber-800 leading-relaxed">
+                    Most glass is 75% Silica (SiO<sub>2</sub>), but forensic differentiation relies on "Forming Agents" and "Stabilizers." 
+                    <strong>Standard Sedan glass</strong> typically uses higher levels of Magnesium (Atomic Mass ~24) to increase durability. 
+                    <strong>Premium SUV glass</strong> often incorporates heavier elements like Antimony (Atomic Mass ~121) or Titanium (Atomic Mass ~47) to filter UV radiation and improve acoustic insulation, significantly increasing the overall mass-to-volume ratio at the atomic scale.
+                </p>
+            </div>
+
             <div class="grid grid-cols-1 md:grid-cols-3 gap-12 mb-10">
                 <!-- Column 1 -->
                 <div class="flex flex-col items-center space-y-4">
@@ -61,7 +77,7 @@
                         <div class="shard" id="shard-1" style="bottom: 10px; left: 35px;"></div>
                     </div>
                     <div class="text-xs font-mono bg-gray-100 p-2 rounded">
-                        $\rho_{liq}$: <span id="v1" class="text-blue-600 font-bold">2.00</span>
+                        &rho;<sub>liq</sub>: <span id="v1" class="text-blue-600 font-bold">2.20</span> g/cm&sup3;
                     </div>
                 </div>
 
@@ -75,7 +91,7 @@
                         <div class="shard" id="shard-2" style="bottom: 10px; left: 35px;"></div>
                     </div>
                     <div class="text-xs font-mono bg-gray-100 p-2 rounded">
-                        $\rho_{liq}$: <span id="v2" class="text-blue-600 font-bold">2.00</span>
+                        &rho;<sub>liq</sub>: <span id="v2" class="text-blue-600 font-bold">2.20</span> g/cm&sup3;
                     </div>
                 </div>
 
@@ -89,7 +105,7 @@
                         <div class="shard" id="shard-3" style="bottom: 10px; left: 35px;"></div>
                     </div>
                     <div class="text-xs font-mono bg-gray-100 p-2 rounded">
-                        $\rho_{liq}$: <span id="v3" class="text-blue-600 font-bold">2.00</span>
+                        &rho;<sub>liq</sub>: <span id="v3" class="text-blue-600 font-bold">2.20</span> g/cm&sup3;
                     </div>
                 </div>
             </div>
@@ -97,7 +113,7 @@
             <div class="bg-slate-50 border-2 border-slate-200 rounded-xl p-6">
                 <div class="flex items-center justify-between mb-4">
                     <label class="font-bold text-slate-800">Adjust Liquid Mixture Density (Ethanol + Bromoform)</label>
-                    <span id="master-val" class="text-2xl font-black text-blue-600 font-mono">2.00</span>
+                    <span id="master-val" class="text-2xl font-black text-blue-600 font-mono">2.20</span>
                 </div>
                 <input type="range" id="densitySlider" min="2.20" max="2.80" step="0.01" value="2.20" 
                        class="w-full h-3 bg-slate-300 rounded-lg appearance-none cursor-pointer accent-blue-600">
