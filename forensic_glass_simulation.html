@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Forensic Glass Analysis Lab</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        canvas {
+            image-rendering: pixelated;
+        }
+        input[type=range] {
+            @apply w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600;
+        }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen font-sans">
+    <div class="max-w-6xl mx-auto p-4 md:p-8">
+        <header class="mb-8 border-b border-slate-700 pb-4">
+            <h1 class="text-3xl font-bold text-blue-400 tracking-tight">Forensic Glass Lab: Refractive Index Analysis</h1>
+            <p class="text-slate-400 mt-2">Investigate glass evidence using Snell's Law and the Becke Line Test.</p>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            <!-- Controls Column -->
+            <div class="lg:col-span-4 space-y-6">
+                <div class="bg-slate-800 p-6 rounded-xl shadow-xl border border-slate-700">
+                    <h2 class="text-xl font-semibold mb-4 flex items-center">
+                        <svg class="w-5 h-5 mr-2 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
+                        Sample Selection
+                    </h2>
+                    <select id="sample-select" class="w-full bg-slate-700 border border-slate-600 text-white rounded-lg p-2.5 focus:ring-blue-500 focus:border-blue-500">
+                        <option value="evidence">Crime Scene Evidence (Sample A)</option>
+                        <option value="suspect1">Suspect 1: Window Fragment</option>
+                        <option value="suspect2">Suspect 2: Bottle Glass</option>
+                        <option value="suspect3">Suspect 3: Pyrex Laboratory Glass</option>
+                    </select>
+                </div>
+
+                <div class="bg-slate-800 p-6 rounded-xl shadow-xl border border-slate-700">
+                    <h2 class="text-xl font-semibold mb-4 flex items-center">
+                        <svg class="w-5 h-5 mr-2 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path></svg>
+                        Laser Control
+                    </h2>
+                    <div class="space-y-4">
+                        <div>
+                            <div class="flex justify-between mb-1">
+                                <label class="text-sm font-medium">Incidence Angle (θ₁)</label>
+                                <span id="angle-val" class="text-blue-400 font-mono">45.0°</span>
+                            </div>
+                            <input type="range" id="angle-slider" min="0" max="85" step="0.5" value="45">
+                        </div>
+                        <div class="bg-slate-900/50 p-4 rounded-lg border border-slate-700">
+                            <div class="flex justify-between text-sm mb-2">
+                                <span class="text-slate-400">Refractive Index (n₁) Air:</span>
+                                <span class="font-mono">1.00</span>
+                            </div>
+                            <div class="flex justify-between text-sm">
+                                <span class="text-slate-400">Refractive Index (n₂) Glass:</span>
+                                <span id="n-display" class="font-mono text-emerald-400">1.517</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-slate-800 p-6 rounded-xl shadow-xl border border-slate-700">
+                    <h2 class="text-xl font-semibold mb-4">Becke Line Test</h2>
+                    <p class="text-sm text-slate-400 mb-4">Immerse the glass in an oil with n = 1.515. Adjust focus to find the Becke line.</p>
+                    <div class="space-y-4">
+                        <div>
+                            <div class="flex justify-between mb-1 text-sm">
+                                <label>Microscope Focus</label>
+                                <span id="focus-val" class="text-blue-400">Neutral</span>
+                            </div>
+                            <input type="range" id="focus-slider" min="-10" max="10" step="1" value="0">
+                        </div>
+                        <div class="text-xs text-slate-500 italic">
+                            Tip: If the halo moves INTO the glass when focusing UP (sliding right), the glass has a higher RI than the oil.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Simulation Column -->
+            <div class="lg:col-span-8 space-y-6">
+                <!-- Snell's Law Visualizer -->
+                <div class="bg-slate-800 p-4 rounded-xl shadow-xl border border-slate-700 overflow-hidden">
+                    <h3 class="text-sm uppercase tracking-widest text-slate-500 mb-2 font-bold">Snell's Law Simulation</h3>
+                    <canvas id="snellCanvas" width="700" height="350" class="w-full bg-slate-900 rounded-lg"></canvas>
+                </div>
+
+                <!-- Microscope View -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="bg-slate-800 p-4 rounded-xl shadow-xl border border-slate-700">
+                        <h3 class="text-sm uppercase tracking-widest text-slate-500 mb-2 font-bold">Microscopic View</h3>
+                        <canvas id="microCanvas" width="300" height="300" class="w-full aspect-square bg-slate-900 rounded-lg"></canvas>
+                    </div>
+                    <div class="bg-slate-800 p-6 rounded-xl shadow-xl border border-slate-700">
+                        <h3 class="text-xl font-semibold mb-4 text-blue-400">Lab Results</h3>
+                        <div class="space-y-3 overflow-y-auto max-h-[220px]">
+                            <table class="w-full text-left text-sm">
+                                <thead class="text-slate-400 border-b border-slate-700">
+                                    <tr>
+                                        <th class="pb-2">Sample</th>
+                                        <th class="pb-2">Measured RI</th>
+                                        <th class="pb-2">Becke Result</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="results-body">
+                                    <!-- Results will be logged here -->
+                                </tbody>
+                            </table>
+                        </div>
+                        <button id="log-btn" class="mt-6 w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 rounded-lg transition-colors">
+                            Log Current Sample Result
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Educational Footer -->
+        <footer class="mt-12 bg-slate-800 p-8 rounded-2xl border border-slate-700">
+            <h2 class="text-2xl font-bold text-white mb-4 italic">The Physics of Forensic Glass Analysis</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div>
+                    <h4 class="text-blue-400 font-bold mb-2">Snell's Law</h4>
+                    <p class="text-sm text-slate-300">n₁ sin θ₁ = n₂ sin θ₂. By measuring the angle of incidence and refraction, forensic scientists can calculate the exact refractive index of a glass fragment to identify its source.</p>
+                </div>
+                <div>
+                    <h4 class="text-blue-400 font-bold mb-2">The Becke Line</h4>
+                    <p class="text-sm text-slate-300">A bright halo observed near the border of a particle immersed in a liquid of a different refractive index. When the microscope focus is raised, the line moves toward the material with the higher RI.</p>
+                </div>
+                <div>
+                    <h4 class="text-blue-400 font-bold mb-2">Match Point</h4>
+                    <p class="text-sm text-slate-300">When the glass and the liquid have the same refractive index, the Becke line disappears and the glass becomes nearly invisible. This is called the Match Point.</p>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <script>
+        const samples = {
+            'evidence': { name: 'Evidence Sample A', n: 1.517, color: '#e2e8f0' },
+            'suspect1': { name: 'Suspect 1 (Window)', n: 1.517, color: '#f1f5f9' },
+            'suspect2': { name: 'Suspect 2 (Bottle)', n: 1.472, color: '#dcfce7' },
+            'suspect3': { name: 'Suspect 3 (Pyrex)', n: 1.470, color: '#bae6fd' }
+        };
+
+        const immersionOilN = 1.515;
+        let currentSampleKey = 'evidence';
+        let theta1Deg = 45;
+        let focusLevel = 0;
+
+        const snellCanvas = document.getElementById('snellCanvas');
+        const sCtx = snellCanvas.getContext('2d');
+        const microCanvas = document.getElementById('microCanvas');
+        const mCtx = microCanvas.getContext('2d');
+
+        const sampleSelect = document.getElementById('sample-select');
+        const angleSlider = document.getElementById('angle-slider');
+        const focusSlider = document.getElementById('focus-slider');
+        const angleVal = document.getElementById('angle-val');
+        const nDisplay = document.getElementById('n-display');
+        const logBtn = document.getElementById('log-btn');
+        const resultsBody = document.getElementById('results-body');
+
+        function drawSnell() {
+            const w = snellCanvas.width;
+            const h = snellCanvas.height;
+            const midX = w / 2;
+            const midY = h / 2;
+            const n1 = 1.0;
+            const n2 = samples[currentSampleKey].n;
+
+            sCtx.clearRect(0, 0, w, h);
+
+            // Draw Background (Air & Glass)
+            sCtx.fillStyle = '#1e293b';
+            sCtx.fillRect(0, 0, midX, h);
+            sCtx.fillStyle = '#334155';
+            sCtx.fillRect(midX, 0, midX, h);
+
+            // Labels
+            sCtx.fillStyle = '#94a3b8';
+            sCtx.font = '12px sans-serif';
+            sCtx.fillText('AIR (n₁=1.00)', 20, 30);
+            sCtx.fillText('GLASS (n₂=' + n2.toFixed(3) + ')', midX + 20, 30);
+
+            // Normal Line
+            sCtx.setLineDash([5, 5]);
+            sCtx.strokeStyle = '#64748b';
+            sCtx.beginPath();
+            sCtx.moveTo(0, midY);
+            sCtx.lineTo(w, midY);
+            sCtx.stroke();
+            sCtx.setLineDash([]);
+
+            // Physics Calculation
+            const theta1Rad = (theta1Deg * Math.PI) / 180;
+            const sinTheta2 = (n1 * Math.sin(theta1Rad)) / n2;
+            const theta2Rad = Math.asin(sinTheta2);
+            const theta2Deg = (theta2Rad * 180) / Math.PI;
+
+            // Draw Rays
+            const rayLength = 300;
+
+            // Incident Ray
+            const x1 = midX - rayLength * Math.cos(theta1Rad);
+            const y1 = midY - rayLength * Math.sin(theta1Rad);
+
+            sCtx.lineWidth = 3;
+            sCtx.strokeStyle = '#ef4444'; // Red Laser
+            sCtx.shadowBlur = 10;
+            sCtx.shadowColor = '#ef4444';
+            sCtx.beginPath();
+            sCtx.moveTo(x1, y1);
+            sCtx.lineTo(midX, midY);
+            sCtx.stroke();
+
+            // Refracted Ray
+            const x2 = midX + rayLength * Math.cos(theta2Rad);
+            const y2 = midY + rayLength * Math.sin(theta2Rad);
+
+            sCtx.beginPath();
+            sCtx.moveTo(midX, midY);
+            sCtx.lineTo(x2, y2);
+            sCtx.stroke();
+
+            sCtx.shadowBlur = 0;
+
+            // Draw Angles Arcs
+            sCtx.strokeStyle = '#60a5fa';
+            sCtx.beginPath();
+            sCtx.arc(midX, midY, 40, Math.PI, Math.PI + theta1Rad);
+            sCtx.stroke();
+            sCtx.fillText('θ₁: ' + theta1Deg.toFixed(1) + '°', midX - 80, midY - 50);
+
+            sCtx.strokeStyle = '#34d399';
+            sCtx.beginPath();
+            sCtx.arc(midX, midY, 40, 0, theta2Rad);
+            sCtx.stroke();
+            sCtx.fillText('θ₂: ' + theta2Deg.toFixed(1) + '°', midX + 50, midY + 50);
+        }
+
+        function drawMicroscope() {
+            const w = microCanvas.width;
+            const h = microCanvas.height;
+            const sample = samples[currentSampleKey];
+
+            mCtx.clearRect(0, 0, w, h);
+
+            // Draw Oil Background
+            mCtx.fillStyle = '#1e293b';
+            mCtx.fillRect(0, 0, w, h);
+
+            // Draw Glass Fragment (Simplified as a jagged shape)
+            const cx = w/2;
+            const cy = h/2;
+            const size = 80;
+
+            mCtx.beginPath();
+            mCtx.moveTo(cx - 60, cy - 40);
+            mCtx.lineTo(cx + 50, cy - 70);
+            mCtx.lineTo(cx + 80, cy + 20);
+            mCtx.lineTo(cx + 10, cy + 90);
+            mCtx.lineTo(cx - 70, cy + 40);
+            mCtx.closePath();
+
+            // Visibility based on RI difference
+            const nDiff = Math.abs(sample.n - immersionOilN);
+            const visibility = Math.min(1, nDiff * 15 + 0.1);
+
+            mCtx.fillStyle = `rgba(148, 163, 184, ${visibility * 0.3})`;
+            mCtx.fill();
+
+            // Becke Line Logic
+            // If focus > 0 (Up), halo moves to higher RI
+            // If sample.n > oil.n, halo moves IN (shrink)
+            // If sample.n < oil.n, halo moves OUT (expand)
+
+            const beckeStrength = Math.abs(focusLevel) * nDiff * 20;
+            if (beckeStrength > 0.1) {
+                let offset = 0;
+                if (focusLevel > 0) {
+                    // Moving focus up
+                    offset = (sample.n > immersionOilN) ? -beckeStrength : beckeStrength;
+                } else if (focusLevel < 0) {
+                    // Moving focus down
+                    offset = (sample.n > immersionOilN) ? beckeStrength : -beckeStrength;
+                }
+
+                mCtx.lineWidth = 2;
+                mCtx.strokeStyle = `rgba(255, 255, 255, ${Math.min(0.8, beckeStrength / 5)})`;
+                mCtx.shadowBlur = 5;
+                mCtx.shadowColor = 'white';
+
+                mCtx.save();
+                mCtx.translate(cx, cy);
+                const scale = 1 + (offset / 100);
+                mCtx.scale(scale, scale);
+                mCtx.translate(-cx, -cy);
+
+                mCtx.beginPath();
+                mCtx.moveTo(cx - 60, cy - 40);
+                mCtx.lineTo(cx + 50, cy - 70);
+                mCtx.lineTo(cx + 80, cy + 20);
+                mCtx.lineTo(cx + 10, cy + 90);
+                mCtx.lineTo(cx - 70, cy + 40);
+                mCtx.closePath();
+                mCtx.stroke();
+                mCtx.restore();
+                mCtx.shadowBlur = 0;
+            }
+
+            // Static border
+            mCtx.lineWidth = 1;
+            mCtx.strokeStyle = `rgba(148, 163, 184, ${visibility})`;
+            mCtx.stroke();
+        }
+
+        function update() {
+            angleVal.textContent = theta1Deg.toFixed(1) + '°';
+            nDisplay.textContent = samples[currentSampleKey].n.toFixed(3);
+
+            const focusMap = {
+                '-10': 'Very Low', '-5': 'Low', '0': 'Neutral', '5': 'High', '10': 'Very High'
+            };
+            document.getElementById('focus-val').textContent = focusMap[focusLevel] || (focusLevel > 0 ? 'Up' : 'Down');
+
+            drawSnell();
+            drawMicroscope();
+        }
+
+        sampleSelect.addEventListener('change', (e) => {
+            currentSampleKey = e.target.value;
+            update();
+        });
+
+        angleSlider.addEventListener('input', (e) => {
+            theta1Deg = parseFloat(e.target.value);
+            update();
+        });
+
+        focusSlider.addEventListener('input', (e) => {
+            focusLevel = parseFloat(e.target.value);
+            update();
+        });
+
+        logBtn.addEventListener('click', () => {
+            const sample = samples[currentSampleKey];
+            const beckeResult = (sample.n > immersionOilN) ? 'Moves In (RI > Oil)' : (sample.n < immersionOilN ? 'Moves Out (RI < Oil)' : 'Disappears (Match)');
+
+            const row = document.createElement('tr');
+            row.className = 'border-b border-slate-700/50';
+            row.innerHTML = `
+                <td class="py-2">${sample.name}</td>
+                <td class="py-2 font-mono text-blue-400">${sample.n.toFixed(3)}</td>
+                <td class="py-2 text-xs text-slate-400">${beckeResult}</td>
+            `;
+            resultsBody.prepend(row);
+        });
+
+        // Init
+        update();
+    </script>
+</body>
+</html>
